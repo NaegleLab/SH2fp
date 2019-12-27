@@ -1,0 +1,48 @@
+New analysis pipeline for high-throughput domain-peptide affinity experiments improves SH2 interaction data
+Tom Ronan, Roman Garnett, and Kristen Naegle
+
+
+Note on dependencies: Files and data are located in /externaldata /ms_func_lib and /origdata subdirectories.
+
+Analysis for the manuscript was performed as follows:
+
+Running:
+
+    python 01_load_and_convert_raw_data_from_expt_format.py
+
+reads the raw data from the original plate format as supplied by the original authors, and produces a flat-table
+version of the original raw data with minimal changes made (see comments in code). The file produced is:
+
+    01_rawdata_loaded_from_expt_format.csv
+
+Researchers wanting to do their own independent analysis of the raw measurements can start with this, more conveniently
+formatted version of the raw data.
+
+Next, the raw measurements are grouped, and curve fitting and model selection are performed as described in the
+manuscript. To perform that step, run (run time is approximately 21 minutes or more):
+
+    python 02_Kd_curve_fitting_and_model_selection.py
+
+which uses the '01_rawdata_loaded_from_expt_format.csv' file as input. The output of curve fitting and model selection
+is found here:
+
+    02_fitted_Kd_and_model_selection_data.csv
+
+Finally, the steps of protein functionality analysis and turning multiple replicates into a single reported affinity is
+performed in the following code:
+
+    python 03_replicate_and_functionality_analysis.py
+
+which uses the '02_fitted_Kd_and_model_selection_data.csv' file as input. The output of this code is found in two files:
+
+    03a_fitted_Kd_and_model_selection_data_with_functionality_evaluated.csv
+    03b_grouped_data_including_published.csv
+
+The first file, '03a_fitted_Kd_and_model_selection_data_with_functionality_evaluated.csv', shows the results at
+the replicate level after protein functionality has been evaluated. The second file,
+'03b_grouped_data_including_published.csv', contains the final results at the domain-peptide level.
+
+
+
+
+
