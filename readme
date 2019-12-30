@@ -45,4 +45,102 @@ the replicate level after protein functionality has been evaluated. The second f
 
 
 
+-------------------------
+
+The file '01_rawdata_loaded_from_expt_format.csv', is a conversion of the plate-style raw data format from the original raw data to a flat-table style format, with no additional analysis. Each row in the data represents a single well on the original plate. The data file contains the following columns:
+
+	filename: The filename from the original publication raw data for this row 
+	plate_number: The 384-well plate identification number from the original publication raw data
+	peptide_number: the id number of the peptide from the original publication master peptide list (found at
+		'/origdata/Jones FP master peptide list edited.csv')
+	peptide_description: A text description of the peptide from the original publication raw data.
+	domain_name: the name of the protein domain tested against the peptide on the plate
+	domain_pos: the position on the plate of the domain (relevant in the cases where the same domain was tested more than
+		once on the plate)
+	domain_conc: the concentration of the domain in the specific well
+	FP: the FP value
+	bg: a background value common to the entire plate
+
+	Note: There are 12 concentration measurements per domain peptide pair.
+	In order to identify the unique domain-peptide pair tested, the filename,
+	the plate_number, and the peptide number, plus the the domain and the domain
+	position are needed to provide a unique identifier for an experimental interaction.
+
+The file '02_fitted_Kd_and_model_selection_data.csv', contains the 12 measurements for each measurement compressed into one row. Each row then reprsents one full affinity measurement, with the 12 concentrations and 12 FP values. In addition, each row contains results from all models fitted, plus the model selected. The data file contains the following columns:
+
+	domain: protein domain
+	gene_name: peptide gene source
+	pY_pos: phosphotyrosine position in the original source of the peptide (which, when combined with the gene name, results
+		in the common phosphopeptide descriptor, eg. EFGR pY 1172)
+	peptide_number: the id number of the peptide from the original publication master peptide list (found at
+		'/origdata/Jones FP master peptide list edited.csv')
+	peptide_description: A text description of the peptide from the original publication raw data.
+	plate_number: The 384-well plate identification number from the original publication raw data
+	filename: The filename from the original publication raw data for this row 
+	domain_pos: the position on the plate of the domain (relevant in the cases where the same domain was tested more than
+		once on the plate)
+	bg: a background value common to the entire plate
+	pepConcTxt: a text field concatenating the peptide concentration list
+	FluorTxt: a text field concatenating the FP value list for each of the concentrations
+	PeptideConc: a non-text field concatenating the peptide concentration list (for use in the analysis script)
+	Fluorescence: a non-text field concatenating the FP value list for each of the concentrations (for use in the analysis script)
+	linear_slope: the fitted slope of the linear model fit
+	linear_offset: the fitted offset (in FP units) of the linear model fit
+	linear_rsq: the r-squared calculation for the linear fit
+	linear_AICc: the AICc score for the linear fit
+	linear_resVar: variance of the residuals for the linear fit
+	linear_success: a boolean indicator of linear fit success
+	fo_Fmax: the fitted Fmax (saturation) for the first-order model fit
+	fo_Kd: the fitted affinity (Kd, in uM) of the first-order model fit
+	fo_offset: the fitted offset (in FP units) of the first-order model fit
+	fo_rsq: the r-squared calculation for the first-order fit
+	fo_AICc: the AICc score for the first-order fit
+	fo_resVar: variance of the residuals for the  the first-order fit
+	fo_success: a boolean indicator of first-order fit success
+	peptide_str: a text string representing the peptide sequence
+	pep_seq_cleaned: an alternate version of the text string representing the peptide sequence, without special characters
+	pep_seq_10mer_aligned: an aligned (to the pY) 10-mer representation of the peptide string for easy peptide comparison
+	domain_seq_align_gapless: the SH2 protein domain sequence from an internally generated alignment (gaps removed)
+	simJones_Kd: internal use fields for comparison to the original publication
+	simJones_Fmax: internal use fields for comparison to the original publication
+	simJones_offset: internal use fields for comparison to the original publication
+	simJones_rsq: internal use fields for comparison to the original publication
+	simJones_binding_call: internal use fields for comparison to the original publication
+	fit_method: the selected model fit (linear or first-order) based on the lowest AICc score
+	fit_slope: the fitted slope of the selected fit (if available)
+	fit_Kd: the fitted affinity (Kd) of the selected fit (if available)
+	fit_Fmax: the fitted Fmax (saturation) for the selected fit (if available)
+	fit_offset: the fitted offset (in FP units) of the selected fit
+	fit_rsq: the r-squared calculation for the selected fit
+	fit_AICc: the AICc score for the selected fit
+	fit_resVar: variance of the residuals for the selected fit
+	fit_success: a boolean indicator of the selected fit success
+	fit_residuals: a text field concatenating the residuals at each point of the selected fit
+	fit_modelDNR: the dynamic range of the selected fit (Fmax-offset)
+	fit_sumres: the sum of the residuals for the selected fit
+	fit_snr: the fit signal to noise ratio calculated by fit_sumres/fit_modelDNR
+	fit_dnr: the dynamic range of the selected fit (Fmax-offset)
+	binding_call: the final categorization of the fit after model selection and additional evaluation
+
+
+The file '03a_fitted_Kd_and_model_selection_data_with_functionality_evaluated.csv' contains the same data as '02_fitted_Kd_and_model_selection_data.csv', but with the additional fields relating to functional protein identification:
+
+	binder_in_rep_grp: indicates whether there was any binder in the replicate group for a domain-peptide
+	protein_non_functional: indicates whether the domain protein tested in this measurement is likely to be non-functional
+	binding_call_functionality_evaluated: indicates the revised call for this measurement based on the protein functionality assessment
+
+
+The file '03b_grouped_data_including_published.csv' contains the final affinity results of our revised analysis after replicate group evaluation, as well as the original published affinity. Fields are as above, plus:
+
+
+	count_replicates: total count of all replicate measurements for a given domain-peptide pair
+	count_bind: count of replicates categorized as binders
+	count_nobind: count of replicates categorized as non-binders
+	count_agg: count of replicates categorized as aggregators
+	count_lowSNR: count of replicates categorized as low-SNR interactions
+	count_nonfunctional: count of replicates for which categorization changed to non-functional after protein functionality evaluation
+	pub_Kd_mean: the published mean affinity (Kd, in uM)
+	pub_num_replicates: the number of replicates indicated in the original publication (represents the number before certain
+		filtering processess were performed in the original analysis, use with caution)
+
 
