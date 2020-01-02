@@ -119,7 +119,7 @@ The file '02_fitted_Kd_and_model_selection_data.csv', contains the 12 measuremen
 	fit_modelDNR: the dynamic range of the selected fit (Fmax-offset)
 	fit_sumres: the sum of the residuals for the selected fit
 	fit_snr: the fit signal to noise ratio calculated by fit_sumres/fit_modelDNR
-	fit_dnr: the dynamic range of the selected fit (Fmax-offset)
+	fit_dnr: the dynamic range of the FP data (max FP-min FP)
 	binding_call: the final categorization of the fit after model selection and additional evaluation
 
 
