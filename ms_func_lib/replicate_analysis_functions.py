@@ -16,34 +16,6 @@ def identify_replicate_groups_with_one_or_more_binders(df):
     return merge_df
 
 
-def old_evaluate_protein_functionality(df):
-    # uses filename as proxy for 'run' in a single day -- Jones data follows this format
-    # uses replicate groups with one or more binders as a determination that
-    # the protein was, at some point, functional and can bind
-
-    protein_funct_df = df.copy()[['filename', 'domain', 'domain_pos', 'binding_call', 'binder_in_rep_grp']].sort_values(
-        ['domain', 'filename', 'domain_pos', 'binding_call', 'binder_in_rep_grp']).groupby(
-        ['domain', 'filename', 'domain_pos']).agg(
-        {'binding_call': lambda x: True if not any(x.astype(str).str.contains('binder')) else False,
-         'binder_in_rep_grp': lambda x: True if any(x == True) else False})
-    protein_funct_df = protein_funct_df.rename(
-        columns={'binding_call': 'no_binder_in_run', 'binder_in_rep_grp': 'binder_in_other_run'})
-
-    # protein is non-functional only if there is no binder in the run/day/filename but there are binders in other runs
-    # in other words, mark whole days functional only if they contain verifiable false negatives.
-    protein_funct_df[
-        'protein_non_functional'] = protein_funct_df.no_binder_in_run & protein_funct_df.binder_in_other_run
-    protein_funct_df = protein_funct_df.drop(['no_binder_in_run', 'binder_in_other_run'],
-                                             axis=1)  # remove intermediate columns
-    protein_funct_df = protein_funct_df.reset_index()
-    merge_df = pd.merge(df, protein_funct_df, how='left', left_on=['domain', 'filename', 'domain_pos'],
-                        right_on=['domain', 'filename', 'domain_pos'])
-    merge_df['binding_call_functionality_evaluated'] = merge_df.binding_call
-    merge_df.loc[merge_df.protein_non_functional == True, 'binding_call_functionality_evaluated'] = 'non-functional'
-
-    return merge_df
-
-
 def evaluate_protein_functionality(df):
     # uses filename as proxy for 'run' in a single day -- Jones data follows this format
     # uses replicate groups with one or more binders as a determination that
@@ -83,7 +55,7 @@ def evaluate_protein_functionality(df):
     return merge_df
 
 
-def analyze_replicates(df):
+def analyze_replicates_v2(df):
     start_time = time.time()
 
     # replicate analysis
@@ -111,9 +83,13 @@ def analyze_replicates(df):
         row_dict.update({'gene_name': replicate_group_description[1]})
         row_dict.update({'pY_pos': replicate_group_description[2]})
 
-        # get counts for each of the different binding calls: binder, nobinding, agregator, low-SNR
-        call_counts_dict = {bindingcall_text: (replicate_group_df.binding_call.values == bindingcall_text).sum() for
-                            bindingcall_text in bindingcall_list}
+        # binding call revised to account for protein functionality
+        # only affects non-binders, annotates false-negative non=binders to improve non-binding calls
+        # uses the binding_call_functionality_evaluated field instead of the binding_call field
+
+        call_counts_dict = {
+            bindingcall_text: (replicate_group_df.binding_call.values == bindingcall_text).sum() for
+            bindingcall_text in bindingcall_list}
         count_replicates = replicate_group_df.binding_call.shape[0]
 
         # binder call logic
@@ -130,45 +106,44 @@ def analyze_replicates(df):
         else:
             row_dict.update({'binding_call': 'BAD LOGIC'})
 
-        row_dict.update({'count_replicates': count_replicates})
-        row_dict.update({'count_bind': call_counts_dict['binder']})
-        row_dict.update({'count_nobind': call_counts_dict['nobinding']})
-        row_dict.update({'count_agg': call_counts_dict['aggregator']})
-        row_dict.update({'count_lowSNR': call_counts_dict['low-SNR']})
-
-        # additional binding call revised to account for protein functionality
-        # only affects non-binders, annotates false-negative non=binders to improve non-binding calls
-        # uses the binding_call_functionality_evaluated field instead of the binding_call field
-
-        # get counts for each of the different binding calls: binder, nobinding, agregator, low-SNR
-        call_counts_dict = {
-        bindingcall_text: (replicate_group_df.binding_call_functionality_evaluated.values == bindingcall_text).sum() for
-        bindingcall_text in functionalbinding_call_list}
-        count_replicates = replicate_group_df.binding_call_functionality_evaluated.shape[0]
+        functional_call_counts_dict = {
+            bindingcall_text: (replicate_group_df.binding_call_functionality_evaluated.values == bindingcall_text).sum()
+            for
+            bindingcall_text in functionalbinding_call_list}
 
         # binder call logic
-        if call_counts_dict['binder'] > 0:
+        if functional_call_counts_dict['binder'] > 0:
             row_dict.update({'functional_binding_call': 'binder'})
-        elif call_counts_dict['binder'] == 0 and call_counts_dict['nobinding'] > 0:
+        elif functional_call_counts_dict['binder'] == 0 and functional_call_counts_dict['nobinding'] > 0:
             row_dict.update({'functional_binding_call': 'no-binding'})
-        elif call_counts_dict['binder'] == 0 and call_counts_dict['nobinding'] == 0 and \
-                call_counts_dict['aggregator'] > 0 and \
-                call_counts_dict['low-SNR'] == 0 and \
-                call_counts_dict['non-functional'] == 0:
+        elif functional_call_counts_dict['binder'] == 0 and functional_call_counts_dict['nobinding'] == 0 and \
+                functional_call_counts_dict['aggregator'] > 0 and \
+                functional_call_counts_dict['low-SNR'] == 0 and \
+                functional_call_counts_dict['non-functional'] == 0:
             row_dict.update({'functional_binding_call': 'aggregator'})
-        elif call_counts_dict['binder'] == 0 and call_counts_dict['nobinding'] == 0 and \
-                call_counts_dict['aggregator'] == 0 and \
-                call_counts_dict['low-SNR'] > 0 and \
-                call_counts_dict['non-functional'] == 0:
+        elif functional_call_counts_dict['binder'] == 0 and functional_call_counts_dict['nobinding'] == 0 and \
+                functional_call_counts_dict['aggregator'] == 0 and \
+                functional_call_counts_dict['low-SNR'] > 0 and \
+                functional_call_counts_dict['non-functional'] == 0:
             row_dict.update({'functional_binding_call': 'low-SNR'})
-        elif call_counts_dict['binder'] == 0 and call_counts_dict['nobinding'] == 0 and \
-                call_counts_dict['aggregator'] == 0 and \
-                call_counts_dict['low-SNR'] == 0 and \
-                call_counts_dict['non-functional'] > 0:
+        elif functional_call_counts_dict['binder'] == 0 and functional_call_counts_dict['nobinding'] == 0 and \
+                functional_call_counts_dict['aggregator'] == 0 and \
+                functional_call_counts_dict['low-SNR'] == 0 and \
+                functional_call_counts_dict['non-functional'] > 0:
             row_dict.update({'functional_binding_call': 'nonfunctional'})
         else:
             row_dict.update({'functional_binding_call': 'mixed_agg_lowsnr_nonfunc'})
-        row_dict.update({'count_nonfunctional': call_counts_dict['non-functional']})
+
+        count_replicates = replicate_group_df.binding_call_functionality_evaluated.shape[0]
+
+        # get counts for each of the different binding calls: binder, nobinding, agregator, low-SNR, non-functional
+        # revised since first submission, addresses counts after functionality evaluated
+        row_dict.update({'count_replicates': count_replicates})
+        row_dict.update({'count_bind': functional_call_counts_dict['binder']})
+        row_dict.update({'count_nobind': functional_call_counts_dict['nobinding']})
+        row_dict.update({'count_agg': functional_call_counts_dict['aggregator']})
+        row_dict.update({'count_lowSNR': functional_call_counts_dict['low-SNR']})
+        row_dict.update({'count_nonfunctional': functional_call_counts_dict['non-functional']})
 
         # make sure to keep track of variation in the measured peptides
         row_dict.update({'peptide_str': ','.join(sorted(replicate_group_df['peptide_str'].unique()))})
@@ -181,7 +156,7 @@ def analyze_replicates(df):
 
         # create temp_df with only 'binders', then select the index of the row with the lowest Kd
         # use data from this row to populate row dictionary
-        temp_df = replicate_group_df.loc[replicate_group_df.binding_call == 'binder']
+        temp_df = replicate_group_df.loc[replicate_group_df.binding_call_functionality_evaluated == 'binder']
         min_Kd_columns = [
             'filename',
             'plate_number',
@@ -194,29 +169,27 @@ def analyze_replicates(df):
             'fit_Fmax',
             'fit_offset',
             'fit_residuals',
+            'fit_snr',
+            'fit_AICc',
+            'fit_rsq',
+            'fit_resVar',
+            'fit_residuals',
+            'fit_modelDNR',
+            'fit_sumres',
+            'fit_dnr',
         ]
 
         if not temp_df.empty:
             index_value_of_minimum_kd_for_this_domain_peptide = \
-            temp_df.loc[temp_df.fit_Kd == temp_df.fit_Kd.min()].index.values[0]
+                temp_df.loc[temp_df.fit_Kd == temp_df.fit_Kd.min()].index.values[0]
             for col in min_Kd_columns:
                 row_dict.update({col: temp_df.loc[index_value_of_minimum_kd_for_this_domain_peptide, col]})
+            row_dict.update(
+                {'replicate_Kd_list': ','.join(temp_df.fit_Kd.round(4).sort_values().astype(str).values.tolist())})
         else:
             for col in min_Kd_columns:
                 row_dict.update({col: ''})
-
-        ###########################################################
-        # Simulate Jones method to make calls for a replicate group
-        ###########################################################
-        # create temp_df with only 'binders', filter for Kd < 20, then take the mean Kd
-        temp_df = replicate_group_df.loc[replicate_group_df.simJones_binding_call == 'binder']
-        temp_df = temp_df[temp_df.simJones_Kd <= 20]
-        if not temp_df.empty:
-            row_dict.update({'simJones_meanKd': temp_df.simJones_Kd.mean()})
-            row_dict.update({'simJones_Kd_list': ','.join(temp_df.simJones_Kd.astype(str).values.tolist())})
-        else:
-            row_dict.update({'simJones_Kd': ''})
-            row_dict.update({'simJones_Kd_list': ''})
+            row_dict.update({'replicate_Kd_list': ''})
 
         rows_list.append(row_dict)
 
@@ -227,25 +200,33 @@ def analyze_replicates(df):
         'domain',
         'gene_name',
         'pY_pos',
+        'pep_seq_10mer_aligned',
+        'functional_binding_call',
+        'fit_Kd',
+        'fit_Fmax',
+        'fit_offset',
+        'fit_snr',
+        'fit_AICc',
+        'fit_rsq',
+        'fit_resVar',
+        'fit_modelDNR',
+        'fit_sumres',
+        'fit_dnr',
+        'fit_residuals',
+        'filename',
+        'plate_number',
+        'domain_pos',
+        'peptide_number',
         'count_replicates',
         'count_bind',
         'count_nobind',
         'count_agg',
         'count_lowSNR',
-        'binding_call',
-        'functional_binding_call',
         'count_nonfunctional',
-        'fit_Kd',
-        'simJones_meanKd',
-        'simJones_Kd_list',
-        'filename',
-        'plate_number',
-        'domain_pos',
-        'peptide_number',
-        'pep_seq_10mer_aligned',
-        'domain_seq_align_gapless',
+        'binding_call',
+        'replicate_Kd_list',
+        'domain_seq_align_gapless'
     ]]
-
 
     ms_utils.print_flush('\tReplicate analysis complete')
     print

@@ -27,7 +27,7 @@ ms_utils.print_flush('Data exported to : ',functionality_evaluated_filename)
 ms_utils.print_flush('\nBeginning replicate analysis')
 # implement replicate analysis process as described in the manuscript
 # also, simulate original publication fitting process
-replicates_df = raf.analyze_replicates(df)
+replicates_df = raf.analyze_replicates_v2(df)
 ms_utils.print_flush('Replicates analyzed, replicate calls made. Total time elapsed: ',time.time()-total_start_time, 'seconds.')
 
 

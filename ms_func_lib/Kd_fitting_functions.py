@@ -145,6 +145,9 @@ def fit_and_eval_model(function, datax, datay, p0=None):
     elif function is model_firstorder_offset:
         ## Fmax, Kd, c
         fit_results = so.least_squares(errfunc, p0, args=(datax, datay), bounds=([0, 0, 0], [np.inf, np.inf, np.inf]))
+    elif function is model_firstorder:
+        ## Fmax, Kd, c
+        fit_results = so.least_squares(errfunc, p0, args=(datax, datay), bounds=([-100, -100], [np.inf, np.inf]))
     else:
         fit_results = None # or throw and exception here
 
@@ -152,6 +155,8 @@ def fit_and_eval_model(function, datax, datay, p0=None):
         number_of_parameters = 2
     elif function is model_firstorder_offset:
         number_of_parameters = 3
+    elif function is model_firstorder:
+        number_of_parameters = 2
     else:
         number_of_parameters = None # or throw an exception here
 
@@ -216,7 +221,7 @@ def evaluate_fits(df):
     start_time = time.time()
     ms_utils.print_flush('Evaluating Fits')
 
-    # Initialize lists for storing for Ronan-Naegle model selection
+    # Initialize lists for storing for model selection
     fit_method_list = []
     fit_Kd_list = []
     fit_Fmax_list = []
@@ -232,20 +237,6 @@ def evaluate_fits(df):
     fit_sumres_list = []
     fit_modelDNR_list= []
     fit_bindingcall_list = []
-
-    # Initialize lists for storing simulated Jones fitting
-    simJones_Kd_list = []
-    simJones_Fmax_list = []
-    simJones_rsq_list = []
-    simJones_AICc_list = []
-    simJones_resVar_list = []
-    simJones_offset_list = []
-    simJones_residuals_list = []
-    simJones_snr_list = []
-    simJones_dnr_list = []
-    simJones_sumres_list = []
-    simJones_modelDNR_list= []
-    simJones_bindingcall_list = []
 
 
     for row in df.itertuples():
@@ -282,36 +273,10 @@ def evaluate_fits(df):
             ms_utils.print_flush('Model classification error')
             break
 
-        #
-        # Store simulated Jones fits (first order only model)
-        #
-        simJones_Kd_list.append(row.fo_Kd)
-        simJones_Fmax_list.append(row.fo_Fmax)
-        simJones_rsq_list.append(row.fo_rsq)
-        #simJones_AICc_list.append(row.fo_AICc)
-        #simJones_resVar_list.append(row.fo_resVar)
-        simJones_offset_list.append(row.fo_offset)
-        #simJones_y_hat = y_hat_fo
-        #simJones_resid = fl_vals - simJones_y_hat
-        #simJones_residuals_list.append(simJones_resid)
-        #simJones_modelDNR = abs(max(simJones_y_hat) - min(simJones_y_hat))
-        #simJones_sum_resid = np.sum(abs(simJones_resid))
-        #simJones_snr = simJones_modelDNR / simJones_sum_resid
-        #simJones_dnr = abs(fl_vals.max() - fl_vals.min())
-
-        #simJones_modelDNR_list.append(simJones_modelDNR)
-        #simJones_sumres_list.append(simJones_sum_resid)
-        #simJones_snr_list.append(simJones_snr)
-        #simJones_dnr_list.append(simJones_dnr)
-
-        if row.fo_rsq >= 0.9:
-            simJones_bindingcall_list.append('binder')
-        else:
-            simJones_bindingcall_list.append('dropped')
 
 
         #
-        # Evauate and store Ronan-Naegle fits
+        # Evauate and store fits
         #
         if linear_best:
             fit_method_list.append('linear')
@@ -374,23 +339,6 @@ def evaluate_fits(df):
         fit_sumres_list.append(fit_sum_resid)
         fit_snr_list.append(fit_snr)
         fit_dnr_list.append(fit_dnr)
-
-
-
-    df['simJones_Kd'] = pd.Series(simJones_Kd_list, index=df.index)
-    df['simJones_Fmax'] = pd.Series(simJones_Fmax_list, index=df.index)
-    df['simJones_offset'] = pd.Series(simJones_offset_list, index=df.index)
-    df['simJones_rsq'] = pd.Series(simJones_rsq_list, index=df.index)
-    #df['simJones_AICc'] = pd.Series(simJones_AICc_list, index=df.index)
-    #df['simJones_resVar'] = pd.Series(simJones_resVar_list, index=df.index)
-    #df['simJones_residuals'] = pd.Series(simJones_residuals_list, index=df.index)
-    #df['simJones_modelDNR'] = pd.Series(simJones_modelDNR_list, index=df.index)
-    #df['simJones_sumres'] = pd.Series(simJones_sumres_list, index=df.index)
-    #df['simJones_snr'] = pd.Series(simJones_snr_list, index=df.index)
-    #df['simJones_dnr'] = pd.Series(simJones_dnr_list, index=df.index)
-    df['simJones_binding_call'] = pd.Series(simJones_bindingcall_list, index=df.index)
-
-
 
     df['fit_method'] = pd.Series(fit_method_list, index=df.index)
     df['fit_slope'] = pd.Series(fit_slope_list, index=df.index)

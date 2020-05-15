@@ -82,3 +82,18 @@ def replace_signal_and_conc_cols(df):
     df['Fluorescence'] = [np.asarray([float(y) for y in x]).astype('float64') for x in df['FluorTxt'].str.split(',')]
 
     return df
+
+
+def replace_residual_cols(df):
+    """
+    Convert the 'PeptideConc' and 'Fluorescence' fields from str back to a numpy array of float64 values.
+    Return the modified pandas dataframe.
+    """
+    ms_utils.print_flush('\tConsolidating concentrations and signals')
+
+    # remove brackets and leading/trailing spaces
+    df['FitResiduals'] = df['fit_residuals'].str.slice(1,-1).str.strip().str.replace(r'\n','', regex=True).str.replace(' +', ' ', regex=True)
+    #recreate fields as arrays of floats
+    df['FitResiduals'] = [np.asarray([float(y) for y in x]).astype('float64') for x in df['FitResiduals'].str.split(' ')]
+
+    return df

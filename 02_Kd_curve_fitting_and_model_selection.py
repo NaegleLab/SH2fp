@@ -46,9 +46,6 @@ df = pd.read_csv(input_filename,sep=',',low_memory=False)
 number_of_measurements = df.shape[0]
 ms_utils.print_flush('\t\tIndividual measurements loaded: ' + str(number_of_measurements))
 
-
-#
-
 # expand concentrations and fp data into individual columns
 df = rdcf.expand_conc_and_data_into_individ_cols_JONES(df)
 # correct for missing values
@@ -84,13 +81,6 @@ print
 for value in sorted(models_chosen_df[['fit_method', 'binding_call']].apply(tuple, axis=1).unique()):
     print value, models_chosen_df[(models_chosen_df.fit_method == value[0]) & (models_chosen_df.binding_call == value[1])].shape[0]
 print
-
-print 'Jones Calls'
-print '-----------------'
-for value in models_chosen_df.simJones_binding_call.unique():
-    print value, sum(models_chosen_df.simJones_binding_call == value)
-print
-
 
 ms_utils.print_flush('Kd curves fitted to data. Model selected. Total time elapsed: ',time.time()-total_start_time, 'seconds.')
 ms_utils.print_flush('Data exported to : ',models_selected_filename)
